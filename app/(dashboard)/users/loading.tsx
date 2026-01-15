@@ -2,7 +2,7 @@ import React from 'react';
 
 export default function UsersLoading() {
     return (
-        <div className="w-full space-y-4 animate-pulse">
+        <div className="w-full space-y-4 animate-pulse p-8">
             <div className="h-8 bg-gray-200 rounded w-1/4"></div>
             <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
@@ -15,7 +15,7 @@ export default function UsersLoading() {
                     </div>
                 ))}
             </div>
-            <p className="text-sm text-blue-500 font-medium">数据拼命加载中 (由 loading.tsx 自动处理)...</p>
+            <p className="text-sm text-blue-500 font-medium pt-4">数据拼命加载中 (由 loading.tsx 自动处理)...</p>
         </div>
     );
 }
