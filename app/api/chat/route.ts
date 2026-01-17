@@ -1,29 +1,75 @@
 import { NextRequest } from "next/server";
-import { streamText,convertToModelMessages } from 'ai'
+import { streamText, convertToModelMessages, type UIMessage } from 'ai'
 import { createDeepSeek } from "@ai-sdk/deepseek";
-import { DEEPSEEK_API_KEY } from "./key";
+
 const deepSeek = createDeepSeek({
-    apiKey: DEEPSEEK_API_KEY, //设置API密钥
+    apiKey: 'sk-39369143328e4cc29fa0909e05b4df75', // 设置 API 密钥
 });
+
 export async function POST(req: NextRequest) {
-    const { messages } = await req.json(); //获取请求体
-    //这里为什么接受messages 因为我们使用前端的useChat 他会自动注入这个参数，所有可以直接读取
-    const result = streamText({
-        model: deepSeek('deepseek-chat'), //使用deepseek-chat模型
-        messages:convertToModelMessages(messages), //转换为模型消息
-        //前端传过来的额messages不符合sdk格式所以需要convertToModelMessages转换一下
-        //转换之后的格式：
-        //[
-            //{ role: 'user', content: [ [Object] ] },
-            //{ role: 'assistant', content: [ [Object] ] },
-            //{ role: 'user', content: [ [Object] ] },
-            //{ role: 'assistant', content: [ [Object] ] },
-            //{ role: 'user', content: [ [Object] ] },
-            //{ role: 'assistant', content: [ [Object] ] },
-            //{ role: 'user', content: [ [Object] ] }
-        //]
-        system: '你是一个高级程序员，请根据用户的问题给出回答', //系统提示词
-    });
-   
-    return result.toUIMessageStreamResponse() //返回流式响应
+    try {
+        console.log('--- Incoming Chat Request ---');
+        
+        // 1. 获取并解析请求体
+        let body;
+        try {
+            body = await req.json();
+            console.log(body,'body');
+            
+        } catch (e) {
+            console.error('Failed to parse request JSON:', e);
+            return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { 
+                status: 400,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        const { messages } = body as { messages: UIMessage[] };
+        
+        // 2. 校验 messages
+        if (!messages || !Array.isArray(messages)) {
+            console.error('Validation Failed: messages is missing or not an array. Body:', JSON.stringify(body));
+            return new Response(JSON.stringify({ 
+                error: 'Invalid messages format. "messages" array is required.',
+                received: messages === undefined ? 'undefined' : typeof messages
+            }), { 
+                status: 400,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        console.log(`Processing ${messages.length} messages...`);
+
+        // 3. 转换消息格式
+        let modelMessages;
+        try {
+            modelMessages = await convertToModelMessages(messages);
+        } catch (e) {
+            console.error('Error in convertToModelMessages:', e);
+            throw e; // 重新抛出以进入外部 catch
+        }
+        console.log(modelMessages,'modelMessages');
+        
+        // 4. 生成流式响应
+        const result = streamText({
+            model: deepSeek('deepseek-chat'),
+            messages: modelMessages,
+            system: '你是一个高级程序员，请根据用户的问题给出回答',
+        });
+
+        console.log('Stream started successfully');
+
+        // 5. 返回流式响应，使用 toUIMessageStreamResponse 以适配 useChat 的 UIMessage 格式协议
+        // 使用 as any 避开 TS 类型检查，因为运行时已知存在此方法
+        return (result as any).toUIMessageStreamResponse();
+    } catch (error) {
+        console.error('Chat API Fatal Error:', error);
+        return new Response(JSON.stringify({ 
+            error: 'Internal Server Error', 
+            details: error instanceof Error ? error.message : String(error) 
+        }), { 
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
 }
