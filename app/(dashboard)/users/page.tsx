@@ -48,6 +48,18 @@ export default function Users() {
                     <p className="max-w-2xl text-lg text-muted-foreground">
                         探索 Next.js 提供的不同页面流转方案，掌握每种跳转方式的适用场景与性能权衡。
                     </p>
+
+                    {/* 测试 Server Action 跳转的表单 */}
+                    <form action={handleServerRedirect} className="mt-8 flex items-center gap-4 p-4 border rounded-xl bg-slate-50 dark:bg-slate-900/50">
+                        <div className="flex flex-col">
+                            <span className="text-xs font-bold text-muted-foreground uppercase mb-1">Server Action 测试</span>
+                            <p className="text-sm text-muted-foreground">该表单将触发后端 `redirect` 指令</p>
+                        </div>
+                        <input type="hidden" name="userId" value="1" />
+                        <Button type="submit" variant="default" className="ml-auto">
+                            跳转到用户 1
+                        </Button>
+                    </form>
                 </header>
 
                 <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
